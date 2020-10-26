@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "809798921944",
+    "firebase_url": "https://coursera-project-1-4bc99.firebaseio.com",
+    "project_id": "coursera-project-1-4bc99",
+    "storage_bucket": "coursera-project-1-4bc99.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:809798921944:android:29d69ef67d76d97f8d71ad",
+        "android_client_info": {
+          "package_name": "com.coursera_project_1.worldpeaceissuesmonitor"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "809798921944-0n405amlnb298nlbk4krvt98195ct61m.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDWloYYoGarWqm2gRwYZDVLM-6gYCyZfsI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "809798921944-0n405amlnb298nlbk4krvt98195ct61m.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

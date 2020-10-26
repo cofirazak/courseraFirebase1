@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.skyroute66.worldpeaceissuesmonitor">
+    package="com.coursera_project_1.worldpeaceissuesmonitor">
 
     <application
         android:name=".WPIMApp"
