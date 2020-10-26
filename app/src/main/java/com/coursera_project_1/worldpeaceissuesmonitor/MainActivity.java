@@ -19,7 +19,10 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
@@ -27,6 +30,7 @@ import android.widget.ListView;
 import com.firebase.ui.auth.AuthUI;
 import com.firebase.ui.auth.IdpResponse;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -34,16 +38,18 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 // Task 4 Step 3: implement FirebaseAuth.AuthStateListener interface
 // Task 7 Step 4: implement UserRoleListener interface
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements FirebaseAuth.AuthStateListener, UserRoleListener {
 
     public static Context context;
 
     // Task 7 Step 3: add userRole as private static property (String), default it to "member"
-
+    private String userRole = "member";
 
 
     // Class properties --------------------------------------------------------------
@@ -57,11 +63,24 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int RC_SIGN_IN = 123;
 
-//    private ValueEventListener valueEventListener = new ValueEventListener() {
-//
-//        // Task 4 Step 1: uncomment method and copy the data subscription logic from onCreate to here
-//
-//    };
+    private ValueEventListener valueEventListener = new ValueEventListener() {
+
+        // Task 4 Step 1: uncomment method and copy the data subscription logic from onCreate to here
+        @Override
+        public void onDataChange(@NonNull DataSnapshot snapshot) {
+
+            // this event is fired every time anything under /issues changes
+            // so we reconstruct the ArrayList and tell the adapter to update the screen
+            DatabaseHelper.buildIssuesList(snapshot, issueList);
+            issueListAdaptor.notifyDataSetChanged();
+        }
+
+        @Override
+        public void onCancelled(@NonNull DatabaseError error) {
+            alertFirebaseFailure(error.getMessage());
+            error.toException();
+        }
+    };
 
     // Class methods -------------------------------------------------------------------
 
@@ -78,68 +97,68 @@ public class MainActivity extends AppCompatActivity {
 
     // Task 5 Step 1: if user abort the sign in process, bring them right back
 
-//    @Override
-//    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-//        super.onActivityResult(requestCode, resultCode, data);
-//
-//        if (requestCode == RC_SIGN_IN) {  // it is from the sign in activity
-//
-//            WPIMApp.isSignInUIRunning = false;
-//
-//            IdpResponse response = IdpResponse.fromResultIntent(data);
-//
-//            if (resultCode != RESULT_OK) {
-//                // Sign in failed. If response is null the user canceled the
-//                // sign-in flow using the back button. Otherwise check
-//                // response.getError().getErrorCode() and handle the error.
-//                // ...
-//                if (response == null) {
-//                    // User hit the back button, show sign in activity again
-//                    startSignInUI();
-//                }
-//                else {
-//                    // Show the error message
-//                    alertFirebaseFailure(response.getError().getLocalizedMessage());
-//                    // show sign in activity again
-//                        startSignInUI();
-//                }
-//            }
-//        }
-//    }
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == RC_SIGN_IN) {  // it is from the sign in activity
+
+            WPIMApp.isSignInUIRunning = false;
+
+            IdpResponse response = IdpResponse.fromResultIntent(data);
+
+            if (resultCode != RESULT_OK) {
+                // Sign in failed. If response is null the user canceled the
+                // sign-in flow using the back button. Otherwise check
+                // response.getError().getErrorCode() and handle the error.
+                // ...
+                if (response == null) {
+                    // User hit the back button, show sign in activity again
+                    startSignInUI();
+                }
+                else {
+                    // Show the error message
+                    alertFirebaseFailure(response.getError().getLocalizedMessage());
+                    // show sign in activity again
+                        startSignInUI();
+                }
+            }
+        }
+    }
 
     // Task 4 Step 4: add auth state change listener to implement the interface FirebaseAuth.AuthStateListener
 
-//    @Override
-//    public void onAuthStateChanged(FirebaseAuth auth) {
-//
-//        if (auth.getCurrentUser() != null) {      // authenticated, signed in
-//
-//            // Task 7 Step 6: add or create user role
-//
-//
-//            // Task 4 Step 4: subscribe to data change
-//            DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("/issues");
-//
-//
-//        } else {   // not authenticated or signed out
-//
-//            // Task 4 Step 4: unsubscribe to data change
-//            DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("/issues");
-//
-//
-//            // clear arraylist
-//            issueList.clear();
-//
-//            // update screen
-//            issueListAdaptor.notifyDataSetChanged();
-//
-//            // Task 7 Step 6: clear toolbar (user role change won't trigger automatically)
-//
-//
-//            // Task 4 Step 4: show sign in UI
-//
-//        }
-//    }
+    @Override
+    public void onAuthStateChanged(FirebaseAuth auth) {
+
+        if (auth.getCurrentUser() != null) {      // authenticated, signed in
+
+            // Task 7 Step 6: add or create user role
+            DatabaseHelper.getOrAssignUserRole(this);
+
+            // Task 4 Step 4: subscribe to data change
+            DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("/issues");
+            dbRef.addValueEventListener(valueEventListener);
+
+        } else {   // not authenticated or signed out
+
+            // Task 4 Step 4: unsubscribe to data change
+            DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("/issues");
+            dbRef.removeEventListener(valueEventListener);
+
+            // clear arraylist
+            issueList.clear();
+
+            // update screen
+            issueListAdaptor.notifyDataSetChanged();
+
+            // Task 7 Step 6: clear toolbar (user role change won't trigger automatically)
+            updateToolbar();
+
+            // Task 4 Step 4: show sign in UI
+            startSignInUI();
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -153,7 +172,7 @@ public class MainActivity extends AppCompatActivity {
         context = this;
 
         // Task 4 Step 5: set itself as the auth state change listener
-
+        FirebaseAuth.getInstance().addAuthStateListener(this);
 
 
         ListView myListView = (ListView) findViewById(R.id.issuesListView);
@@ -166,8 +185,9 @@ public class MainActivity extends AppCompatActivity {
 
                 // Task 8: only allow managers to delete
 
-
+                if (userRole.equals("manager")) {
                     openConfirmDeleteDialog(i);
+                }
 
                 return true;
             }
@@ -179,23 +199,23 @@ public class MainActivity extends AppCompatActivity {
         //                to the class property valueEventListener
         //                them comment this block out
 
-        dbRef.addValueEventListener(new ValueEventListener() {
-
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-
-                // this event is fired every time anything under /issues changes
-                // so we reconstruct the ArrayList and tell the adapter to update the screen
-                DatabaseHelper.buildIssuesList(snapshot, issueList);
-                issueListAdaptor.notifyDataSetChanged();
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                alertFirebaseFailure(error.getMessage());
-                error.toException();
-            }
-        });
+//        dbRef.addValueEventListener(new ValueEventListener() {
+//
+//            @Override
+//            public void onDataChange(@NonNull DataSnapshot snapshot) {
+//
+//                // this event is fired every time anything under /issues changes
+//                // so we reconstruct the ArrayList and tell the adapter to update the screen
+//                DatabaseHelper.buildIssuesList(snapshot, issueList);
+//                issueListAdaptor.notifyDataSetChanged();
+//            }
+//
+//            @Override
+//            public void onCancelled(@NonNull DatabaseError error) {
+//                alertFirebaseFailure(error.getMessage());
+//                error.toException();
+//            }
+//        });
 
         FloatingActionButton addButton = (FloatingActionButton)findViewById(R.id.addButton);
 
@@ -216,35 +236,35 @@ public class MainActivity extends AppCompatActivity {
 
     // Task 5 Step 2: provide sign-out function
 
-//    @Override
-//    public boolean onOptionsItemSelected(MenuItem item) {
-//
-//        switch (item.getItemId()) {
-//
-//            case R.id.sign_out_menu_item:
-//
-//                alertDialog = new AlertDialog.Builder(this)
-//                    .setTitle("Sign Out")
-//                    .setMessage("Are you sure you want to sign out?")
-//                    .setPositiveButton("Sign Out", new DialogInterface.OnClickListener() {
-//                        @Override
-//                        public void onClick(DialogInterface dialog, int which) {
-//                            // clear the array and update the screen
-//                            issueList.clear();
-//                            issueListAdaptor.notifyDataSetChanged();
-//                            // Task 5 Step 2: add sign out code here
-//
-//                        }})
-//                    .setNegativeButton("Cancel", null)
-//                    .setIcon(android.R.drawable.ic_dialog_alert)
-//                    .show();
-//
-//                return true;
-//
-//            default:
-//                return super.onOptionsItemSelected(item);
-//        }
-//    }
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+
+        switch (item.getItemId()) {
+
+            case R.id.sign_out_menu_item:
+
+                alertDialog = new AlertDialog.Builder(this)
+                    .setTitle("Sign Out")
+                    .setMessage("Are you sure you want to sign out?")
+                    .setPositiveButton("Sign Out", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            // clear the array and update the screen
+                            issueList.clear();
+                            issueListAdaptor.notifyDataSetChanged();
+                            // Task 5 Step 2: add sign out code here
+                            FirebaseAuth.getInstance().signOut();
+                        }})
+                    .setNegativeButton("Cancel", null)
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .show();
+
+                return true;
+
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
 
     @Override
     public void onPause() {
@@ -264,11 +284,11 @@ public class MainActivity extends AppCompatActivity {
 
     // Task 7 Step 5: add a user role change listener to implement the UserRoleListener interface
 
-//    public void onUserRoleChange(String newRole) {
-//
-//        userRole = newRole;
-//        updateToolbar();
-//    }
+    public void onUserRoleChange(String newRole) {
+
+        userRole = newRole;
+        updateToolbar();
+    }
 
     // helper method to open the add new issue dialog box
     public void openAddIssueDialog() {
@@ -325,63 +345,64 @@ public class MainActivity extends AppCompatActivity {
 
     // Task 4 Step 2: function to start the sign in UI
 
-//    private void startSignInUI() {
-//
-//        if (WPIMApp.isSignInUIRunning || FirebaseAuth.getInstance().getCurrentUser() != null) { return; }
-//
-//        // Choose authentication providers
-//        List<AuthUI.IdpConfig> providers = Arrays.asList(
-//                new AuthUI.IdpConfig.EmailBuilder().build());
-//
-//        // Create and launch sign-in intent
-//        startActivityForResult(
-//                AuthUI.getInstance()
-//                        .createSignInIntentBuilder()
-//                        .setIsSmartLockEnabled(false)
-//                        .setAvailableProviders(providers)
-//                        .build(),
-//                RC_SIGN_IN);
-//
-//        WPIMApp.isSignInUIRunning = true;
-//
-//    }
+    private void startSignInUI() {
+
+        if (WPIMApp.isSignInUIRunning || FirebaseAuth.getInstance().getCurrentUser() != null) { return; }
+
+        // https://firebase.google.com/docs/auth/android/firebaseui#aria-tab-java-android
+        // Choose authentication providers
+        List<AuthUI.IdpConfig> providers = Arrays.asList(
+                new AuthUI.IdpConfig.EmailBuilder().build());
+
+        // Create and launch sign-in intent
+        startActivityForResult(
+                AuthUI.getInstance()
+                        .createSignInIntentBuilder()
+                        .setIsSmartLockEnabled(false)
+                        .setAvailableProviders(providers)
+                        .build(),
+                RC_SIGN_IN);
+
+        WPIMApp.isSignInUIRunning = true;
+
+    }
 
     // Task 7 Step 2: add a function to set the toolbar to either World Peace Issues Monitor
     //                or the user's name and role
 
-//    private void updateToolbar() {
-//
-//        String title = "World Peace Issues Monitor";
-//        String displayRole = "";
-//
-//        // if signed in, get display name and role in parentheses
-//
-//        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
-//
-//            // signed in, attempt to get name
-//
-//            String displayName = FirebaseAuth.getInstance().getCurrentUser().getDisplayName();
-//
-//            // there is a bug, for new users, the displayName does not get updated immediately
-//            // so we need go get it later
-//
-//            if (displayName == null) {
-//
-//                new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        updateToolbar();
-//                    }
-//                }, 1000);
-//
-//            } else {
-//                title = displayName;
-//            }
-//
-//            displayRole = " (" + userRole + ")";
-//        }
-//
-//        ((Toolbar)findViewById(R.id.app_toolbar)).setTitle(title + displayRole);
-//    }
+    private void updateToolbar() {
+
+        String title = "World Peace Issues Monitor";
+        String displayRole = "";
+
+        // if signed in, get display name and role in parentheses
+
+        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
+
+            // signed in, attempt to get name
+
+            String displayName = FirebaseAuth.getInstance().getCurrentUser().getDisplayName();
+
+            // there is a bug, for new users, the displayName does not get updated immediately
+            // so we need go get it later
+
+            if (displayName == null) {
+
+                new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        updateToolbar();
+                    }
+                }, 1000);
+
+            } else {
+                title = displayName;
+            }
+
+            displayRole = " (" + userRole + ")";
+        }
+
+        ((Toolbar)findViewById(R.id.app_toolbar)).setTitle(title + displayRole);
+    }
 
 }

@@ -17,9 +17,12 @@ import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 
@@ -39,46 +42,46 @@ public final class DatabaseHelper {
 
     // Task 7 Step 1: add get or add user role
 
-//    public static final String getOrAssignUserRole(final UserRoleListener listener) {
-//
-//        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
-//
-//        DatabaseReference usersRootRef = FirebaseDatabase.getInstance().getReference("/users");
-//
-//        // have learner type this? it will auto fill
-//
-//        usersRootRef.child(uid + "/role").addListenerForSingleValueEvent(new ValueEventListener() {
-//            @Override
-//            public void onDataChange(@NonNull DataSnapshot snapshot) {
-//                String newRole = snapshot.getValue(String.class);
-//
-//                if (newRole == null) {
-//                    // does not exists, let's set it to member, and tell the listener
-//                    snapshot.getRef().setValue("member")
-//                    .addOnSuccessListener(new OnSuccessListener<Void>() {
-//                        @Override
-//                        public void onSuccess(Void aVoid) {
-//                            listener.onUserRoleChange("member");
-//                        }
-//                    });
-//                }
-//                else {
-//                    // already exists, tell the listener what the role in the database is
-//                    listener.onUserRoleChange(newRole);
-//                }
-//            }
-//
-//            @Override
-//            public void onCancelled(@NonNull DatabaseError error) {
-//                alertError(error.getMessage());
-//            }
-//        });
-//
+    public static final String getOrAssignUserRole(final UserRoleListener listener) {
+
+        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+        DatabaseReference usersRootRef = FirebaseDatabase.getInstance().getReference("/users");
+
+        // have learner type this? it will auto fill
+
+        usersRootRef.child(uid + "/role").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                String newRole = snapshot.getValue(String.class);
+
+                if (newRole == null) {
+                    // does not exists, let's set it to member, and tell the listener
+                    snapshot.getRef().setValue("member")
+                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                        @Override
+                        public void onSuccess(Void aVoid) {
+                            listener.onUserRoleChange("member");
+                        }
+                    });
+                }
+                else {
+                    // already exists, tell the listener what the role in the database is
+                    listener.onUserRoleChange(newRole);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                alertError(error.getMessage());
+            }
+        });
+
 //         function will return asychronously before the above functions are called!
-//
-//        return "member";  // until one of the callback functions are called
-//
-//    }
+
+        return "member";  // until one of the callback functions are called
+
+    }
 
     public static final void buildIssuesList(@NonNull DataSnapshot snapshot, ArrayList<Issue> issuesList) {
 
